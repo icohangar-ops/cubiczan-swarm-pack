@@ -1,5 +1,13 @@
 # CUBICZAN Agent Swarm Intelligence Platform — Installation Pack
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Coordination-Zero_Token-green" alt="Zero Token" />
+  <img src="https://img.shields.io/badge/Speed-5.86x_Faster-blue" alt="5.86x Faster" />
+  <img src="https://img.shields.io/badge/Cost-3.4x_Cheaper-green" alt="3.4x Cheaper" />
+  <img src="https://img.shields.io/badge/Domains-9_Enterprise-orange" alt="9 Domains" />
+  <img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="AGPL-3.0" />
+</p>
+
 
 ## Demo
 
