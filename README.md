@@ -156,6 +156,7 @@ S(worker, task) = Affinity^2.0 × Urgency^1.5 × (1-Difficulty)^1.0
 | **Vector Store** | Qdrant | Semantic search & retrieval |
 | **Agent Memory** | Zep Cloud / self-hosted | Long-term memory with graph |
 | **Task Store** | SQLite (atomic claiming) | Zero-lock task DAG management |
+| **Solana Guardrail** | Solana CLI + Anchor + Surfpool | Policy-gated wallet/program inspection and local/devnet workflows |
 | **Frontend** | Vue 3 + D3.js | Dashboard & visualization |
 | **Backend** | Flask | API layer |
 | **Monitoring** | Grafana + Prometheus | Swarm health, cost, sycophancy alerts |
@@ -217,6 +218,7 @@ cubiczan-swarm-pack/
 │   ├── parl.py                     # PARL reward shaping (Kimi K2.5)
 │   ├── router.py                   # MoE nano-model router
 │   ├── consensus.py                # Adversarial LMSR consensus
+│   ├── solana_cli.py               # Guarded Solana CLI wrapper
 │   ├── anti_sycophancy.py          # Diversity metrics + enforcement
 │   ├── swarm.py                    # Legacy swarm coordinator
 │   ├── requirements.txt            # Python dependencies
@@ -246,8 +248,16 @@ cubiczan-swarm-pack/
 │   └── prometheus/prometheus.yml   # Metrics collection
 │
 └── docs/
-    └── DOMAIN_PLAYBOOKS.md         # Per-domain deployment guides
+    ├── DOMAIN_PLAYBOOKS.md         # Per-domain deployment guides
+    └── SOLANA_CLI_INTEGRATION.md   # Solana CLI guardrails and usage
 ```
+
+### Solana CLI Guardrail
+
+The orchestrator exposes `/api/swarm/solana/plan` and
+`/api/swarm/solana/execute` for policy-gated Solana CLI use. Execution defaults
+to dry-run, agents cannot pass keypair/config flags, and non-local writes
+require a human approval id. See `docs/SOLANA_CLI_INTEGRATION.md`.
 
 ---
 

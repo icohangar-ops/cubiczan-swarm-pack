@@ -110,6 +110,52 @@ def swarm_stats():
     })
 
 
+def get_solana_cli():
+    try:
+        from solana_cli import SolanaCLI
+    except ImportError:
+        from .solana_cli import SolanaCLI
+    return SolanaCLI()
+
+
+@app.route("/api/swarm/solana/plan", methods=["POST"])
+def solana_plan():
+    """Plan a guarded Solana CLI command without executing it."""
+    data = request.get_json() or {}
+    args = data.get("args", [])
+    if not isinstance(args, list):
+        return jsonify({"error": "'args' must be a list of Solana CLI arguments"}), 400
+
+    client = get_solana_cli()
+    plan = client.plan(
+        args=args,
+        cluster=data.get("cluster", "devnet"),
+        approved_by_human=bool(data.get("approved_by_human", False)),
+        approval_id=data.get("approval_id"),
+    )
+    return jsonify(plan.to_dict())
+
+
+@app.route("/api/swarm/solana/execute", methods=["POST"])
+def solana_execute():
+    """Execute a guarded Solana CLI command; dry_run defaults to true."""
+    data = request.get_json() or {}
+    args = data.get("args", [])
+    if not isinstance(args, list):
+        return jsonify({"error": "'args' must be a list of Solana CLI arguments"}), 400
+
+    client = get_solana_cli()
+    result = client.execute(
+        args=args,
+        cluster=data.get("cluster", "devnet"),
+        approved_by_human=bool(data.get("approved_by_human", False)),
+        approval_id=data.get("approval_id"),
+        dry_run=bool(data.get("dry_run", True)),
+    )
+    status = 200 if result.plan.allowed else 403
+    return jsonify(result.to_dict()), status
+
+
 if __name__ == "__main__":
     port = int(os.getenv("ORCHESTRATOR_PORT", "5002"))
     app.run(host="0.0.0.0", port=port, debug=False)

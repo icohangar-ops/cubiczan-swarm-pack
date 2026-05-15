@@ -7,6 +7,17 @@
 *.env.local
 *.env.production
 
+# Solana / Anchor secrets and build artifacts
+id.json
+*.keypair
+*.keypair.json
+.config/solana/
+target/
+.anchor/
+Anchor.toml.local
+test-ledger/
+ledger/
+
 # Python
 __pycache__/
 *.py[cod]
