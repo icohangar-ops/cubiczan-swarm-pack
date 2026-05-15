@@ -12,6 +12,11 @@ import os
 from dataclasses import dataclass, field
 from openai import OpenAI
 
+try:
+    from governance import HeterogeneityReport, compute_heterogeneity_score
+except ImportError:
+    from .governance import HeterogeneityReport, compute_heterogeneity_score
+
 
 @dataclass
 class AgentVote:
@@ -31,6 +36,9 @@ class ConsensusResult:
     debate_rounds: int = 0
     escalate_to_human: bool = False
     dissenting_views: list[str] = field(default_factory=list)
+    heterogeneity_score: float = 0.0
+    model_families: list[str] = field(default_factory=list)
+    governance_attribution: str = ""
 
 
 class LMSRScorer:
@@ -79,6 +87,7 @@ class ConsensusEngine:
         self.models = self._load_models()
         self.scorer = LMSRScorer()
         self.threshold = float(os.getenv("CONSENSUS_THRESHOLD", "0.75"))
+        self.min_heterogeneity_score = float(os.getenv("MIN_HETEROGENEITY_SCORE", "0.34"))
         self.max_rounds = 3
 
     def _load_models(self) -> list[dict]:
@@ -146,6 +155,7 @@ class ConsensusEngine:
         agents = self.models[:cluster_size]
         if not agents:
             raise ValueError("No agent models configured")
+        heterogeneity = compute_heterogeneity_score([agent["model"] for agent in agents])
 
         # Assign contrarian role (last agent in cluster)
         contrarian_idx = len(agents) - 1
@@ -178,8 +188,11 @@ class ConsensusEngine:
                     consensus_score=consensus_score,
                     votes=all_votes,
                     debate_rounds=round_num + 1,
-                    escalate_to_human=False,
+                    escalate_to_human=self._requires_heterogeneity_escalation(heterogeneity),
                     dissenting_views=dissents,
+                    heterogeneity_score=heterogeneity.score,
+                    model_families=heterogeneity.families,
+                    governance_attribution=heterogeneity.attribution,
                 )
 
             # Build context for next round
@@ -203,4 +216,10 @@ class ConsensusEngine:
             dissenting_views=[
                 v.position for v in all_votes if v.is_contrarian
             ],
+            heterogeneity_score=heterogeneity.score,
+            model_families=heterogeneity.families,
+            governance_attribution=heterogeneity.attribution,
         )
+
+    def _requires_heterogeneity_escalation(self, report: HeterogeneityReport) -> bool:
+        return report.score < self.min_heterogeneity_score
