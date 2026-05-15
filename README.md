@@ -8,6 +8,7 @@
   <img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="AGPL-3.0" />
 </p>
 
+
 ## Demo
 
 https://github.com/user-attachments/assets/demo.mp4
