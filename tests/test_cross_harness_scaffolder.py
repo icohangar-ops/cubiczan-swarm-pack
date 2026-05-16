@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "orchestrator"))
 
-from cross_harness_triangulation import (  # noqa: E402
+from cross_harness_scaffolder import (  # noqa: E402
     FoundationAttack,
     FoundationDisclosure,
     HarnessProfile,
@@ -129,7 +129,7 @@ def test_database_blueprint_is_content_addressed() -> None:
     sql = blueprint["sql"]
 
     assert blueprint["strategy"] == "content_addressed_event_store"
-    assert "triangulation_payload_blobs" in sql
+    assert "cross_harness_payload_blobs" in sql
     assert "content_hash text primary key" in sql
-    assert "triangulation_round_events" in sql
+    assert "cross_harness_round_events" in sql
     assert blueprint["token_efficiency"]["store_full_payload_once"] is True

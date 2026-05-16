@@ -1,6 +1,6 @@
-# Cross-Harness Triangulation Protocol
+# Cross-Harness Scaffolder
 
-CHTP v1.0.0 is a software-engineering adaptation of Cubiczan's canonical Consensus Hardening Protocol and TLP pattern for structured AI-to-AI validation across different coding harnesses.
+Cross-Harness Scaffolder v1.0.0 is a software-engineering adaptation of Cubiczan's canonical Consensus Hardening Protocol and TLP pattern for structured AI-to-AI validation across different coding harnesses.
 
 Canonical CHP source: [codeberg.org/cubiczan/consensus-hardening-protocol](https://codeberg.org/cubiczan/consensus-hardening-protocol)
 
@@ -38,7 +38,7 @@ Cubiczan already optimizes for token-efficient swarm work:
 - governance gates and audit evidence,
 - heterogeneous model pools to reduce correlated failure.
 
-CHTP adds a higher-level harness protocol so two coding systems can negotiate the spec before implementation, then verify the implementation against the locked spec.
+Cross-Harness Scaffolder adds a higher-level harness scaffold so two coding systems can negotiate the spec before implementation, then verify the implementation against the locked spec.
 
 ## Phase Architecture
 
@@ -98,13 +98,13 @@ Use `validate_payload_envelope()` and `payload_echo_confirmed()`.
 
 ## Token-Efficient Database Architecture
 
-CHTP uses a normalized event store:
+Cross-Harness Scaffolder uses a normalized event store:
 
-- `triangulation_sessions`: one hot session row.
-- `triangulation_items`: compact per-decision state, agreement, VCL, flip criteria, third-party status.
-- `triangulation_payload_blobs`: content-addressed full packet body, stored once by hash.
-- `triangulation_round_events`: references payload hash plus compact state snapshot.
-- `triangulation_validations`: third-party lock validation trail.
+- `cross_harness_sessions`: one hot session row.
+- `cross_harness_items`: compact per-decision state, agreement, VCL, flip criteria, third-party status.
+- `cross_harness_payload_blobs`: content-addressed full packet body, stored once by hash.
+- `cross_harness_round_events`: references payload hash plus compact state snapshot.
+- `cross_harness_validations`: third-party lock validation trail.
 
 This avoids copying long transcripts into every round. The hot path stores only state, hashes, status, and summaries. Large payload bodies can later move to object storage while the database keeps the content hash.
 
@@ -113,7 +113,7 @@ Use `build_database_blueprint()` to export the schema and scaling notes.
 ## Minimal Python Usage
 
 ```python
-from orchestrator.cross_harness_triangulation import (
+from orchestrator.cross_harness_scaffolder import (
     FoundationDisclosure,
     HarnessProfile,
     TriangulationDossier,

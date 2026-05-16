@@ -25,9 +25,10 @@ __all__ = [
 ]
 """Cubiczan orchestration primitives."""
 
-from .cross_harness_triangulation import (
-    PROTOCOL_VERSION as CHTP_VERSION,
-    TLP_COMPATIBILITY as CHTP_TLP_COMPATIBILITY,
+from .cross_harness_scaffolder import (
+    PROTOCOL_VERSION as CROSS_HARNESS_SCAFFOLDER_VERSION,
+    SCAFFOLDER_SHORT_NAME,
+    TLP_COMPATIBILITY as CROSS_HARNESS_SCAFFOLDER_TLP_COMPATIBILITY,
     FoundationAttack,
     FoundationDisclosure,
     HarnessProfile,
@@ -46,8 +47,9 @@ from .cross_harness_triangulation import (
 )
 
 __all__ = [
-    "CHTP_VERSION",
-    "CHTP_TLP_COMPATIBILITY",
+    "CROSS_HARNESS_SCAFFOLDER_VERSION",
+    "CROSS_HARNESS_SCAFFOLDER_TLP_COMPATIBILITY",
+    "SCAFFOLDER_SHORT_NAME",
     "FoundationAttack",
     "FoundationDisclosure",
     "HarnessProfile",
