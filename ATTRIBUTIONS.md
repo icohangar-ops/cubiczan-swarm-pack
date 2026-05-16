@@ -54,6 +54,10 @@ the upstream license, copyright notices, and commit SHA in this file.
   - https://solana.com/docs/intro/installation/solana-cli-basics
   - https://solana.com/docs/intro/installation/anchor-cli-basics
   - https://solana.com/docs/intro/installation/surfpool-cli-basics
+- Cubiczan CHP implementation in `sec-earnings-workbench/src/cme/chp/*` and
+  the user's TLP v2.2.4 origin-agnostic convergence protocol: design reference
+  for `orchestrator/cross_harness_triangulation.py` and
+  `docs/CROSS_HARNESS_TRIANGULATION_PROTOCOL.md`.
 
 ## Candidate Projects For Future Review
 

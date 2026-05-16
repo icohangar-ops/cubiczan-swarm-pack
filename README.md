@@ -152,6 +152,7 @@ S(worker, task) = Affinity^2.0 × Urgency^1.5 × (1-Difficulty)^1.0
 | **Parallelism** | PARL (Kimi K2.5-inspired) | Dynamic decomposition + reward shaping |
 | **Consensus** | LMSR + Contrarian Agents | Anti-sycophancy adversarial debate |
 | **Governance Kernel** | PolicyGate + AuditKernel | Approval gates, evidence checks, tamper-evident audit logs |
+| **Cross-Harness Triangulation** | CHTP v1.0.0 + TLP v2.2.4-compatible packets | Codex/Claude Code spec validation, payload integrity, VCL diagnosis, third-party lock gates |
 | **LLM Backend** | Ollama / vLLM / llama.cpp | Self-hosted inference ($0 API cost) |
 | **Models** | Qwen-2.5, DeepSeek-R1, Llama-3.3 | Heterogeneous pool (anti-groupthink) |
 | **Knowledge Graph** | Neo4j + GraphRAG | Entity relationships & memory |
@@ -221,6 +222,7 @@ cubiczan-swarm-pack/
 │   ├── router.py                   # MoE nano-model router
 │   ├── consensus.py                # Adversarial LMSR consensus
 │   ├── governance.py               # Policy gates + audit chain
+│   ├── cross_harness_triangulation.py # Codex/Claude Code triangulation protocol
 │   ├── solana_cli.py               # Guarded Solana CLI wrapper
 │   ├── anti_sycophancy.py          # Diversity metrics + enforcement
 │   ├── swarm.py                    # Legacy swarm coordinator
@@ -252,6 +254,7 @@ cubiczan-swarm-pack/
 │
 └── docs/
     ├── AI_GOVERNANCE.md            # Governance research attribution
+    ├── CROSS_HARNESS_TRIANGULATION_PROTOCOL.md # Codex/Claude Code CHTP guide
     ├── DOMAIN_PLAYBOOKS.md         # Per-domain deployment guides
     ├── GOVERNED_SWARM_CONTROLS.md  # Audit, approval, evidence, and DAG controls
     ├── OPEN_SOURCE_VISIBILITY_PLAYBOOK.md # Visibility and outreach plan
