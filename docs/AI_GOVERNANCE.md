@@ -11,6 +11,17 @@ Runtime behavior:
 - `MIN_HETEROGENEITY_SCORE` controls the escalation threshold.
 - A low score escalates to human review even when the LMSR consensus score is high.
 
+Additional runtime controls:
+
+- `AuditKernel` writes append-only, tamper-evident JSONL action logs.
+- `PolicyGate` checks trust levels, approval requirements, rate budgets,
+  evidence thresholds, and kill switches before execution.
+- `build_traceable_task_graph` validates dependency DAGs before workers can
+  claim tasks.
+- `/api/swarm/governance/evaluate` exposes the pre-execution gate to dashboards
+  and external control planes.
+- `/api/swarm/governance/audit/verify` verifies the audit chain.
+
 Attribution:
 
 - Heterogeneity Score and model-monoculture risk concepts adapted from Georgios
@@ -23,3 +34,6 @@ Attribution:
   for Human-AI Hybrid Organizations: A Proxy Validation and Integration
   Analysis*, Geneva, January 6, 2026. Local source:
   `AI Governance papers/ssrn-6306679.pdf`.
+- Audit-first, fail-closed, approval-gate, and agent-control-plane design
+  references are documented in `ATTRIBUTIONS.md`. No external governance
+  project source code is vendored.

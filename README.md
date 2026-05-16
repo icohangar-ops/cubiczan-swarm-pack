@@ -151,6 +151,7 @@ S(worker, task) = Affinity^2.0 × Urgency^1.5 × (1-Difficulty)^1.0
 | **Coordination** | Stigmergy (TEMM1E-inspired) | Zero-token pheromone signals |
 | **Parallelism** | PARL (Kimi K2.5-inspired) | Dynamic decomposition + reward shaping |
 | **Consensus** | LMSR + Contrarian Agents | Anti-sycophancy adversarial debate |
+| **Governance Kernel** | PolicyGate + AuditKernel | Approval gates, evidence checks, tamper-evident audit logs |
 | **LLM Backend** | Ollama / vLLM / llama.cpp | Self-hosted inference ($0 API cost) |
 | **Models** | Qwen-2.5, DeepSeek-R1, Llama-3.3 | Heterogeneous pool (anti-groupthink) |
 | **Knowledge Graph** | Neo4j + GraphRAG | Entity relationships & memory |
@@ -219,6 +220,7 @@ cubiczan-swarm-pack/
 │   ├── parl.py                     # PARL reward shaping (Kimi K2.5)
 │   ├── router.py                   # MoE nano-model router
 │   ├── consensus.py                # Adversarial LMSR consensus
+│   ├── governance.py               # Policy gates + audit chain
 │   ├── solana_cli.py               # Guarded Solana CLI wrapper
 │   ├── anti_sycophancy.py          # Diversity metrics + enforcement
 │   ├── swarm.py                    # Legacy swarm coordinator
@@ -249,7 +251,10 @@ cubiczan-swarm-pack/
 │   └── prometheus/prometheus.yml   # Metrics collection
 │
 └── docs/
+    ├── AI_GOVERNANCE.md            # Governance research attribution
     ├── DOMAIN_PLAYBOOKS.md         # Per-domain deployment guides
+    ├── GOVERNED_SWARM_CONTROLS.md  # Audit, approval, evidence, and DAG controls
+    ├── OPEN_SOURCE_VISIBILITY_PLAYBOOK.md # Visibility and outreach plan
     └── SOLANA_CLI_INTEGRATION.md   # Solana CLI guardrails and usage
 ```
 
@@ -259,6 +264,16 @@ The orchestrator exposes `/api/swarm/solana/plan` and
 `/api/swarm/solana/execute` for policy-gated Solana CLI use. Execution defaults
 to dry-run, agents cannot pass keypair/config flags, and non-local writes
 require a human approval id. See `docs/SOLANA_CLI_INTEGRATION.md`.
+
+### Governed Swarm Controls
+
+The orchestrator exposes `/api/swarm/governance/evaluate` and
+`/api/swarm/governance/audit/verify` for pre-execution policy checks and
+tamper-evident audit-chain verification. The default policy gate blocks weak
+evidence, pauses killed tools, rate-limits external calls, and requires human
+approval for external communications, money movement, legal actions, mainnet
+deploys, and other irreversible operations. See
+`docs/GOVERNED_SWARM_CONTROLS.md` and `ATTRIBUTIONS.md`.
 
 ---
 

@@ -20,6 +20,7 @@ CORS(app)
 
 # Lazy initialization to avoid import errors during Docker build
 _coordinator = None
+_policy_gate = None
 
 
 def get_coordinator():
@@ -30,9 +31,53 @@ def get_coordinator():
     return _coordinator
 
 
+def get_policy_gate():
+    global _policy_gate
+    if _policy_gate is None:
+        try:
+            from governance import build_default_policy_gate
+        except ImportError:
+            from .governance import build_default_policy_gate
+
+        audit_path = os.getenv("GOVERNANCE_AUDIT_LOG", "audit/governance.jsonl")
+        hmac_key = os.getenv("GOVERNANCE_HMAC_KEY") or None
+        _policy_gate = build_default_policy_gate(audit_path=audit_path, hmac_key=hmac_key)
+    return _policy_gate
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "healthy", "service": "cubiczan-orchestrator"})
+
+
+@app.route("/api/swarm/governance/evaluate", methods=["POST"])
+def evaluate_governance_policy():
+    """Evaluate a proposed agent action before execution."""
+    data = request.get_json() or {}
+    tool = data.get("tool", "swarm.execute")
+    action = data.get("action", "execute")
+    actor = data.get("actor", "unknown-agent")
+
+    decision = get_policy_gate().evaluate(
+        tool=tool,
+        actor=actor,
+        action=action,
+        intent=data.get("intent", ""),
+        evidence=data.get("evidence") or {},
+        approved_by_human=bool(data.get("approved_by_human", False)),
+        approval_id=data.get("approval_id"),
+    )
+    status = 200 if decision.allowed else 202 if decision.requires_approval else 403
+    return jsonify(decision.to_dict()), status
+
+
+@app.route("/api/swarm/governance/audit/verify", methods=["GET"])
+def verify_governance_audit():
+    """Verify the tamper-evident governance audit chain."""
+    gate = get_policy_gate()
+    if not gate.audit_kernel:
+        return jsonify({"valid": True, "event_count": 0, "last_hash": "", "error": ""})
+    return jsonify(gate.audit_kernel.verify_chain().to_dict())
 
 
 @app.route("/api/swarm/execute", methods=["POST"])
@@ -57,8 +102,22 @@ def execute_task():
         return jsonify({"error": "Missing 'task' field"}), 400
 
     try:
+        decision = get_policy_gate().evaluate(
+            tool="swarm.execute",
+            actor=data.get("actor", "api-client"),
+            action="execute",
+            intent=task,
+            evidence=data.get("evidence") or {},
+            approved_by_human=bool(data.get("approved_by_human", False)),
+            approval_id=data.get("approval_id"),
+        )
+        if not decision.allowed:
+            status = 202 if decision.requires_approval else 403
+            return jsonify({"governance": decision.to_dict()}), status
+
         coordinator = get_coordinator()
         result = coordinator.execute(task=task, task_id=task_id)
+        result["governance"] = decision.to_dict()
         return jsonify(result)
     except Exception as e:
         logger.error(f"Execution failed: {e}", exc_info=True)

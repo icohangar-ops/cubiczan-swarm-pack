@@ -377,3 +377,44 @@ def compute_critical_path(tasks: dict[str, DAGTask]) -> int:
                     queue.append(dep_id)
 
     return max(dist.values()) if dist else 1
+
+
+def build_traceable_task_graph(
+    task_specs: list[dict],
+    graph_id: str | None = None,
+) -> TaskGraph:
+    """
+    Build and validate a TaskGraph from a deterministic planner payload.
+
+    This is the non-LLM counterpart to alpha_decompose: callers can produce a
+    task list from templates, forms, or external planners, then enforce the
+    same DAG validation and speedup accounting before workers claim anything.
+    """
+    graph = TaskGraph(graph_id=graph_id or str(uuid.uuid4())[:8])
+
+    for index, spec in enumerate(task_specs, start=1):
+        task_id = spec.get("task_id") or f"t{index}"
+        graph.tasks[task_id] = DAGTask(
+            task_id=task_id,
+            description=spec.get("description", ""),
+            agent_type=spec.get("agent_type", "analyst"),
+            tags=set(spec.get("tags", [])),
+            dependencies=list(spec.get("depends_on", spec.get("dependencies", []))),
+            status=TaskStatus(spec.get("status", TaskStatus.PENDING.value)),
+        )
+
+    for task_id, task in graph.tasks.items():
+        for dep_id in task.dependencies:
+            if dep_id not in graph.tasks:
+                raise ValueError(f"Task {task_id} depends on missing task {dep_id}")
+            graph.tasks[dep_id].dependents.append(task_id)
+
+    if not validate_dag(graph.tasks):
+        raise ValueError("Task graph contains a cycle")
+
+    graph.critical_path_length = compute_critical_path(graph.tasks)
+    graph.theoretical_speedup = round(
+        len(graph.tasks) / max(graph.critical_path_length, 1),
+        4,
+    )
+    return graph
