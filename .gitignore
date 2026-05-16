@@ -72,3 +72,7 @@ prometheus-data/
 # Logs
 *.log
 agent_log.jsonl
+
+# CHP session artifacts (local only)
+.chp_registry.json
+.chp/sessions/
