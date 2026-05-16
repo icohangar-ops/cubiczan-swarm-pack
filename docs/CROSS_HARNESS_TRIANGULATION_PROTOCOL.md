@@ -1,6 +1,8 @@
 # Cross-Harness Triangulation Protocol
 
-CHTP v1.0.0 is a software-engineering adaptation of Cubiczan's CHP/TLP pattern for structured AI-to-AI validation across different coding harnesses.
+CHTP v1.0.0 is a software-engineering adaptation of Cubiczan's canonical Consensus Hardening Protocol and TLP pattern for structured AI-to-AI validation across different coding harnesses.
+
+Canonical CHP source: [codeberg.org/cubiczan/consensus-hardening-protocol](https://codeberg.org/cubiczan/consensus-hardening-protocol)
 
 It is designed for cases where one harness is strongest at implementation and local verification, while another is strongest at spec critique, long-form reasoning, or adversarial review. A common pairing is:
 
@@ -181,7 +183,9 @@ Do not let either system self-certify a lock. LOCKED requires third-party confir
 
 ## Attribution
 
-This protocol adapts Cubiczan's CHP implementation from `sec-earnings-workbench/src/cme/chp/*` and the user's TLP v2.2.4 / origin-agnostic AI convergence protocol for cross-model triangulation with adversarial foundation validation.
+This protocol adapts Cubiczan's canonical Consensus Hardening Protocol from [codeberg.org/cubiczan/consensus-hardening-protocol](https://codeberg.org/cubiczan/consensus-hardening-protocol), including the `src/cme/chp/*` primitives for parity, R0/foundation gates, payload integrity, VCL diagnosis, lock progression, and third-party validation.
+
+It also incorporates the user's TLP v2.2.4 / origin-agnostic AI convergence protocol for cross-model triangulation with adversarial foundation validation.
 
 It also aligns with the repository's existing governance and anti-sycophancy layers:
 

@@ -1,10 +1,12 @@
 """Cross-Harness Triangulation Protocol.
 
-CHTP adapts the local CHP/TLP governance pattern for code-building workflows
-that deliberately combine different AI harnesses, such as Codex and Claude
-Code. The module keeps packet contracts and persistence metadata compact so
-teams can run cross-model validation without copying full transcripts every
-round.
+CHTP adapts Cubiczan's canonical Consensus Hardening Protocol for
+code-building workflows that deliberately combine different AI harnesses, such
+as Codex and Claude Code. The module keeps packet contracts and persistence
+metadata compact so teams can run cross-model validation without copying full
+transcripts every round.
+
+Canonical CHP source: https://codeberg.org/cubiczan/consensus-hardening-protocol
 """
 from __future__ import annotations
 

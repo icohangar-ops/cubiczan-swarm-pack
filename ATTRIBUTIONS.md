@@ -54,10 +54,15 @@ the upstream license, copyright notices, and commit SHA in this file.
   - https://solana.com/docs/intro/installation/solana-cli-basics
   - https://solana.com/docs/intro/installation/anchor-cli-basics
   - https://solana.com/docs/intro/installation/surfpool-cli-basics
-- Cubiczan CHP implementation in `sec-earnings-workbench/src/cme/chp/*` and
-  the user's TLP v2.2.4 origin-agnostic convergence protocol: design reference
-  for `orchestrator/cross_harness_triangulation.py` and
-  `docs/CROSS_HARNESS_TRIANGULATION_PROTOCOL.md`.
+- Cubiczan Consensus Hardening Protocol:
+  https://codeberg.org/cubiczan/consensus-hardening-protocol
+  - Canonical design reference for parity checks, R0/foundation gates, payload
+    envelopes, VCL diagnosis, third-party validation, lock progression, and
+    triangulation runner concepts used by
+    `orchestrator/cross_harness_triangulation.py` and
+    `docs/CROSS_HARNESS_TRIANGULATION_PROTOCOL.md`.
+  - The user's TLP v2.2.4 origin-agnostic convergence protocol provided the
+    cross-harness packet contract and Codex/Claude Code operating split.
 
 ## Candidate Projects For Future Review
 
