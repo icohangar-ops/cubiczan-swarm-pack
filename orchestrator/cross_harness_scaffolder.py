@@ -1,10 +1,11 @@
 """Cross-Harness Scaffolder.
 
 Cross-Harness Scaffolder adapts Cubiczan's canonical Consensus Hardening
-Protocol for code-building workflows that deliberately combine different AI
-harnesses, such as Codex and Claude Code. The module keeps packet contracts and
-persistence metadata compact so teams can run cross-model validation without
-copying full transcripts every round.
+Protocol for code-building workflows that deliberately leverage the strengths
+of different AI harnesses, such as Codex and Claude Code, to build efficient
+code. The module keeps packet contracts and persistence metadata compact so
+teams can run cross-model validation without copying full transcripts every
+round.
 
 Canonical CHP source: https://codeberg.org/cubiczan/consensus-hardening-protocol
 """

@@ -152,7 +152,7 @@ S(worker, task) = Affinity^2.0 × Urgency^1.5 × (1-Difficulty)^1.0
 | **Parallelism** | PARL (Kimi K2.5-inspired) | Dynamic decomposition + reward shaping |
 | **Consensus** | LMSR + Contrarian Agents | Anti-sycophancy adversarial debate |
 | **Governance Kernel** | PolicyGate + AuditKernel | Approval gates, evidence checks, tamper-evident audit logs |
-| **Cross-Harness Scaffolder** | CHS v1.0.0 + TLP v2.2.4-compatible packets | Codex/Claude Code spec validation, payload integrity, VCL diagnosis, third-party lock gates |
+| **Cross-Harness Scaffolder** | CHS v1.0.0 + TLP v2.2.4-compatible packets | Leverages different harness strengths to build efficient code with spec validation, payload integrity, VCL diagnosis, and third-party lock gates |
 | **LLM Backend** | Ollama / vLLM / llama.cpp | Self-hosted inference ($0 API cost) |
 | **Models** | Qwen-2.5, DeepSeek-R1, Llama-3.3 | Heterogeneous pool (anti-groupthink) |
 | **Knowledge Graph** | Neo4j + GraphRAG | Entity relationships & memory |

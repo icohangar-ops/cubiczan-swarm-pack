@@ -1,10 +1,10 @@
 # Cross-Harness Scaffolder
 
-Cross-Harness Scaffolder v1.0.0 is a software-engineering adaptation of Cubiczan's canonical Consensus Hardening Protocol and TLP pattern for structured AI-to-AI validation across different coding harnesses.
+Cross-Harness Scaffolder v1.0.0 is a software-engineering layer that leverages the strengths of different AI harnesses to build efficient code. It adapts Cubiczan's canonical Consensus Hardening Protocol and TLP pattern for structured AI-to-AI validation across coding systems.
 
 Canonical CHP source: [codeberg.org/cubiczan/consensus-hardening-protocol](https://codeberg.org/cubiczan/consensus-hardening-protocol)
 
-It is designed for cases where one harness is strongest at implementation and local verification, while another is strongest at spec critique, long-form reasoning, or adversarial review. A common pairing is:
+It is designed for cases where one harness is strongest at implementation and local verification, while another is strongest at spec critique, long-form reasoning, or adversarial review. The goal is not model theater; it is less rework, lower token waste, stronger specs, and code that survives tests. A common pairing is:
 
 - Codex as implementation harness: repo-local edits, tests, builds, migrations, packaging, and push discipline.
 - Claude Code as spec/adversary harness: architecture critique, blind-spot attack, alternate framing, and partner-system review.
@@ -38,7 +38,7 @@ Cubiczan already optimizes for token-efficient swarm work:
 - governance gates and audit evidence,
 - heterogeneous model pools to reduce correlated failure.
 
-Cross-Harness Scaffolder adds a higher-level harness scaffold so two coding systems can negotiate the spec before implementation, then verify the implementation against the locked spec.
+Cross-Harness Scaffolder adds a higher-level harness scaffold so two coding systems can negotiate the spec before implementation, then verify the implementation against the locked spec. It turns harness differences into an engineering advantage: one system attacks the plan, one system patches the repo, and both leave a compact audit trail.
 
 ## Phase Architecture
 
