@@ -1,0 +1,1 @@
+cubiczan-ml>=0.1.0  # CubicZan ML
