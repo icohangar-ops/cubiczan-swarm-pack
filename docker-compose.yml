@@ -62,11 +62,13 @@ services:
       - cubiczan-net
 
   # ============= NEO4J (Knowledge Graph) =============
+  # SECURITY WARNING: NEO4J_PASSWORD must be set to a strong value before deploying.
+  # The fallback below is for local development ONLY. Do NOT use in production.
   neo4j:
     image: neo4j:5-community
     container_name: cubiczan-neo4j
     environment:
-      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-cubiczan_secure_password}
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-changeme}
       - NEO4J_PLUGINS=["apoc","graph-data-science"]
     ports:
       - "7474:7474"   # Browser
@@ -105,11 +107,13 @@ services:
       - cubiczan-net
 
   # ============= GRAFANA (Monitoring) =============
+  # SECURITY WARNING: GRAFANA_ADMIN_PASSWORD must be set to a strong value before deploying.
+  # The fallback below is for local development ONLY. Do NOT use in production.
   grafana:
     image: grafana/grafana-oss:latest
     container_name: cubiczan-grafana
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-cubiczan_admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme}
     ports:
       - "3001:3000"
     volumes:
