@@ -1,4 +1,4 @@
-# CUBICZAN Agent Swarm Intelligence Platform — SpaceTimeDB Edition
+# Cubiczan — Real-Time Swarm Intelligence Platform
 
 <p align="center">
   <img src="https://img.shields.io/badge/Coordination-Zero_Token-green" alt="Zero Token" />
@@ -9,7 +9,11 @@
   <img src="https://img.shields.io/badge/License-AGPL--3.0-blue" alt="AGPL-3.0" />
 </p>
 
-> **SpaceTimeDB DevSpot Submission** — A fork of [cubiczan-swarm-pack](https://github.com/cubiczan/cubiczan-swarm-pack), migrated from SQLite + Flask to [SpaceTimeDB](https://spacetimedb.com/) for real-time, serverless coordination with zero-polling WebSocket subscriptions.
+<p align="center">
+  <img src="assets/thumbnail.png" width="600" alt="Cubiczan Swarm Pack" />
+</p>
+
+Zero-token coordination. Heterogeneous agents. Enterprise-grade swarm intelligence. Built on [SpaceTimeDB](https://spacetimedb.com/) for real-time, serverless, multi-client coordination with zero-polling WebSocket subscriptions.
 
 ---
 
@@ -17,37 +21,9 @@
 
 https://github.com/user-attachments/assets/demo.mp4
 
-> _Generated with [demo-video-generator](https://github.com/zan-maker/demo-video-generator)_
-> Zero-token coordination. Heterogeneous agents. Enterprise-grade swarm intelligence.
-> Now with real-time reactive state via SpaceTimeDB.
+> _3-minute walkthrough: architecture, SpaceTimeDB schema, reducers, scent field, consensus engine, and live dashboard._
 
 Built on [MiroFish](https://github.com/666ghj/MiroFish) (AGPL-3.0) swarm simulation + [TEMM1E](https://github.com/nagisanzenin/temm1e) (MIT) stigmergic coordination + [Kimi K2.5 PARL](https://arxiv.org/abs/2602.02276) parallel agent architecture + [SpaceTimeDB](https://spacetimedb.com/) real-time database.
-
----
-
-## SpaceTimeDB Integration
-
-This fork replaces the original SQLite + Flask architecture with SpaceTimeDB, a **hosted, real-time relational database** that exposes state changes as subscribable WebSocket events. This is not a wrapper or an ORM shim — the entire coordination layer runs as compiled Rust reducers inside the SpaceTimeDB runtime.
-
-### What Changed
-
-| Aspect | Original (SQLite + Flask) | SpaceTimeDB Edition |
-|--------|--------------------------|---------------------|
-| **State Store** | SQLite (polling via Flask API) | SpaceTimeDB tables (reactive subscriptions) |
-| **Backend API** | Flask REST endpoints | SpaceTimeDB reducers (called directly by clients) |
-| **Coordination** | HTTP polling → Python orchestrator | WebSocket subscribe → reducer invocation |
-| **Pheromone Field** | SQLite `scent_signals` table | SpaceTimeDB `ScentSignal` table (real-time inserts stream to subscribers) |
-| **Task Claiming** | `UPDATE ... WHERE status='ready'` (atomic SQL) | `claim_task` reducer (atomic STDB row mutation) |
-| **Polling Overhead** | Clients poll every 1–5 seconds | **Zero polling** — changes push via WebSocket |
-
-### How It Works
-
-1. **Clients connect** to SpaceTimeDB via the `spacetimedb` SDK (`ws://host/db`)
-2. **Clients subscribe** to tables: `SELECT * FROM Task`, `SELECT * FROM ScentSignal`, etc.
-3. **Any connected client** can invoke a reducer (e.g., `claim_task(task_id, worker_id)`) — SpaceTimeDB executes it atomically on the server
-4. **All subscribers** receive row-level insert/update/delete events instantly
-5. **Pheromone signals** are rows in `ScentSignal` — workers emit by inserting, read by aggregating subscribed rows
-6. **Zero Flask. Zero polling. Zero coordination tokens.**
 
 ---
 
@@ -57,14 +33,14 @@ Every major multi-agent framework (AutoGen, CrewAI, LangGraph) coordinates agent
 
 **This is an architecture bug, not a feature.**
 
-Cubiczan replaces inter-agent LLM chat with **stigmergy** — indirect communication via environmental signals (scent pheromones), the same mechanism ant colonies use to solve NP-hard routing problems without centralized control.
+Cubiczan replaces inter-agent LLM chat with **stigmergy** — indirect communication via environmental signals (scent pheromones), the same mechanism ant colonies use to solve NP-hard routing problems without centralized control. The entire coordination layer runs as compiled Rust reducers inside SpaceTimeDB, with real-time state streaming to every connected client over WebSocket. No REST API. No polling. No middleware.
 
 ### The Math That Matters
 
-| Metric | Traditional (AutoGen/CrewAI) | Cubiczan Hybrid |
-|--------|------------------------------|-----------------|
+| Metric | Traditional (AutoGen/CrewAI) | Cubiczan |
+|--------|------------------------------|----------|
 | 12-subtask coordination tokens | ~78 LLM calls | **0 coordination calls** |
-| Context growth per subtask | **28x** (quadratic: h̄·m(m+1)/2) | **~190 bytes flat** (linear) |
+| Context growth per subtask | **28x** (quadratic) | **~190 bytes flat** (linear) |
 | Speed (12 independent tasks) | 103s | **18s (5.86x faster)** |
 | Cost (12 independent tasks) | 7,379 tokens | **2,149 tokens (3.4x cheaper)** |
 | Simple task overhead | Framework boot cost | **Zero. Invisible.** |
@@ -75,66 +51,67 @@ Cubiczan replaces inter-agent LLM chat with **stigmergy** — indirect communica
 
 ```
   REQUEST
-     │
-     ▼
-┌──────────────────────────────────────────────────────────────┐
-│  Layer 1: MoE ROUTER (1 nano LLM call)                      │
-│  Classifies domain + complexity. Simple tasks → single agent │
-│  Complex tasks (3+ deliverables, speedup ≥1.3x) → swarm     │
-└────────────────────────┬─────────────────────────────────────┘
-                         │ (complex only)
-                         ▼
-┌──────────────────────────────────────────────────────────────┐
-│  Layer 2: ALPHA DECOMPOSITION (1 LLM call → DAG)            │
-│  Kahn's topological sort, critical path optimization         │
-│  Produces dependency graph with tagged subtasks               │
-└────────────────────────┬─────────────────────────────────────┘
-                         │
-        ┌────────────────┼────────────────┐
-        ▼                ▼                ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│   Worker 1   │ │   Worker 2   │ │   Worker 3   │   Heterogeneous
-│  Qwen-2.5    │ │  DeepSeek-R1 │ │  Llama-3.3   │   models (frozen)
-│  ┌────────┐  │ │  ┌────────┐  │ │  ┌────────┐  │
-│  │STIGMERGY│ │ │  │STIGMERGY│ │ │  │STIGMERGY│ │   Zero-token
-│  │ Claim   │  │ │  │ Claim   │  │ │  │ Claim   │  │   coordination
-│  │ Emit    │  │ │  │ Emit    │  │ │  │ Emit    │  │
-│  │ Read    │  │ │  │ Read    │  │ │  │ Read    │  │
-│  └────────┘  │ │  └────────┘  │ │  └────────┘  │
-└──────┬───────┘ └──────┬───────┘ └──────┬───────┘
-       │                │                │
-       └────────────────┼────────────────┘
-                        ▼
-              ┌──────────────────┐
-              │  SCENT FIELD     │  SpaceTimeDB ScentSignal table
-              │  6 signal types  │  Exponential decay, GC via reducer
-              │  Task selection: │  S = A^2.0 · U^1.5 · (1-D)^1.0
-              │  Pure arithmetic │     · (1-F)^0.8 · R^1.2
-              │  Zero LLM calls │
-              └──────────────────┘
-                        │
-                        ▼ (if high-stakes)
-              ┌──────────────────┐
-              │ CONSENSUS ENGINE │  Adversarial debate + LMSR scoring
-              │ Anti-sycophancy  │  Contrarian agent stress-testing
-              │ Heterogeneous    │  Min 2 distinct model families
-              └──────────────────┘
-                        │
-                        ▼
-              ┌──────────────────┐
-              │  PARL REWARD     │  rPARL = λ1·r_parallel + λ2·r_finish + r_perf
-              │  (Kimi K2.5)     │  Prevents serial collapse + over-decomposition
-              └──────────────────┘
+     |
+     v
++--------------------------------------------------------------+
+|  Layer 1: MoE ROUTER (1 nano LLM call)                      |
+|  Classifies domain + complexity. Simple tasks -> single agent |
+|  Complex tasks (3+ deliverables, speedup >= 1.3x) -> swarm   |
++-----------------------------+--------------------------------+
+                              | (complex only)
+                              v
++--------------------------------------------------------------+
+|  Layer 2: ALPHA DECOMPOSITION (1 LLM call -> DAG)            |
+|  Kahn's topological sort, critical path optimization         |
+|  Produces dependency graph with tagged subtasks               |
++-----------------------------+--------------------------------+
+                              |
+        +---------------------+---------------------+
+        v                     v                     v
++--------------+   +--------------+   +--------------+
+|   Worker 1   |   |   Worker 2   |   |   Worker 3   |  Heterogeneous
+|  Qwen-2.5    |   |  DeepSeek-R1 |   |  Llama-3.3   |  models (frozen)
+|  +--------+  |   |  +--------+  |   |  +--------+  |
+|  |STIGMERGY|  |   |  |STIGMERGY|  |   |  |STIGMERGY|  |  Zero-token
+|  | Claim   |  |   |  | Claim   |  |   |  | Claim   |  |  coordination
+|  | Emit    |  |   |  | Emit    |  |   |  | Emit    |  |  via SpaceTimeDB
+|  | Read    |  |   |  | Read    |  |   |  | Read    |  |  reducers
+|  +--------+  |   |  +--------+  |   |  +--------+  |
++------+-------+   +------+-------+   +------+-------+
+       |                  |                  |
+       +------------------+------------------+
+                              |
+                              v
+                +--------------------------+
+                |    SCENT FIELD          |  SpaceTimeDB ScentSignal table
+                |    6 signal types       |  Exponential decay via reducer
+                |    Task selection:      |  S = A^2.0 * U^1.5 * (1-D)^1.0
+                |    Pure arithmetic      |     * (1-F)^0.8 * R^1.2
+                |    Zero LLM calls       |
+                +--------------------------+
+                              |
+                              v (if high-stakes)
+                +--------------------------+
+                |   CONSENSUS ENGINE      |  Adversarial debate + LMSR scoring
+                |   Anti-sycophancy       |  Contrarian agent stress-testing
+                |   Heterogeneous         |  Min 2 distinct model families
+                +--------------------------+
+                              |
+                              v
+                +--------------------------+
+                |   PARL REWARD            |  rPARL = L1*r_parallel + L2*r_finish + r_perf
+                |   (Kimi K2.5)            |  Prevents serial collapse + over-decomposition
+                +--------------------------+
 ```
 
 ### Stigmergy: How Workers Coordinate Without Talking
 
 ```
-Worker 1 completes Task A → emits COMPLETION scent (5 min half-life)
-Worker 2 reads scent field → sees Task B now has all deps met
-Worker 2 claims Task B via claim_task reducer (atomic STDB mutation)
-Worker 3 struggles on Task C → emits DIFFICULTY scent (2 min half-life)
-Worker 4 reads field → avoids Task C, picks Task D instead (higher score)
+Worker 1 completes Task A -> emits COMPLETION scent (5 min half-life)
+Worker 2 reads scent field   -> sees Task B now has all deps met
+Worker 2 claims Task B       via claim_task reducer (atomic STDB mutation)
+Worker 3 struggles on Task C -> emits DIFFICULTY scent (2 min half-life)
+Worker 4 reads field          -> avoids Task C, picks Task D instead (higher score)
 
 Zero LLM calls. Zero coordination tokens. Pure arithmetic. Zero polling.
 ```
@@ -143,24 +120,49 @@ Zero LLM calls. Zero coordination tokens. Pure arithmetic. Zero polling.
 
 | Signal | Half-Life | Purpose |
 |--------|-----------|---------|
-| `COMPLETION` | 5 min | Task finished |
-| `FAILURE` | 6 min | Attempt failed |
-| `DIFFICULTY` | 2 min | Worker struggling |
-| `URGENCY` | Grows (cap 5.0) | Prevents starvation |
-| `PROGRESS` | 20 sec | Worker heartbeat |
-| `HELP_WANTED` | 2 min | Specialist needed |
+| `Completion` | 5 min | Task finished |
+| `Failure` | 6 min | Attempt failed |
+| `Difficulty` | 2 min | Worker struggling |
+| `Urgency` | Grows (cap 5.0) | Prevents starvation |
+| `Progress` | 20 sec | Worker heartbeat |
+| `HelpWanted` | 2 min | Specialist needed |
 
 **Task Selection Formula** (40 lines of arithmetic, not an LLM call):
 ```
-S(worker, task) = Affinity^2.0 × Urgency^1.5 × (1-Difficulty)^1.0
-                  × (1-Failure)^0.8 × Reward^1.2
+S(worker, task) = Affinity^2.0 * Urgency^1.5 * (1-Difficulty)^1.0
+                * (1-Failure)^0.8 * Reward^1.2
 ```
+
+---
+
+## SpaceTimeDB Integration
+
+The entire coordination backend runs inside [SpaceTimeDB](https://spacetimedb.com/), a hosted real-time relational database that compiles Rust modules and exposes state changes as subscribable WebSocket events. There is no Flask, no REST API, and no polling layer. Clients connect via the `spacetimedb` SDK, subscribe to tables, and invoke reducers directly — SpaceTimeDB handles atomicity, broadcasting, and persistence.
+
+### How It Works
+
+1. **Clients connect** via `spacetimedb.connect(host, db)` — opens a persistent WebSocket
+2. **Clients subscribe** with SQL: `SELECT * FROM Task`, `SELECT * FROM ScentSignal`, etc.
+3. **Any connected client** invokes a reducer (e.g., `claim_task(task_id, worker_id)`) — executed atomically on the server
+4. **All subscribers** receive row-level insert/update/delete events instantly over WebSocket
+5. **Pheromone signals** are rows in the `ScentSignal` table — workers emit by inserting, read by aggregating subscribed rows
+6. **Zero middleware. Zero polling. Zero coordination tokens.**
+
+### Why SpaceTimeDB
+
+SpaceTimeDB's architecture is uniquely suited for swarm coordination because it merges the database, the backend, and the pub/sub layer into a single runtime:
+
+- **Atomic reducers** replace REST endpoints — task claiming, scent emission, and consensus computation happen in-process with serializable isolation, no application server needed
+- **Row-level subscriptions** replace polling — every connected dashboard client receives the exact rows that changed, the instant they change, with zero configuration
+- **Multi-client native** — any number of workers, dashboards, or monitoring tools can connect simultaneously and see identical state without any coordination protocol
+- **Compiled Rust modules** — reducers run at native speed with no cold-start overhead, no serialization, and no framework bottleneck
+- **Hosted and serverless** — no infrastructure to manage, no Docker Compose, no connection pooling — just connect and subscribe
 
 ---
 
 ## SpaceTimeDB Schema
 
-All state lives in 8 SpaceTimeDB tables. The dashboard client subscribes to each via SQL queries and receives real-time row events over WebSocket.
+All coordination state lives in 8 tables inside the SpaceTimeDB module. The dashboard client subscribes to each via SQL queries and receives real-time row events over WebSocket.
 
 ### Tables
 
@@ -171,7 +173,7 @@ All state lives in 8 SpaceTimeDB tables. The dashboard client subscribes to each
 | **ScentSignal** | `signal_id`, `task_id`, `worker_id`, `scent_type`, `intensity`, `emitted_at`, `metadata` | Pheromone signals (6 scent types) |
 | **ConsensusVote** | `vote_id`, `round_id`, `task_id`, `agent_id`, `model_name`, `position`, `confidence`, `reasoning`, `is_contrarian`, `voted_at` | Individual consensus votes |
 | **ConsensusResult** | `round_id`, `task_id`, `final_position`, `consensus_score`, `debate_rounds`, `escalate_to_human`, `heterogeneity_score`, `total_votes`, `dissenting_count`, `computed_at` | Aggregated consensus outcome |
-| **AuditEvent** | `event_id`, `actor`, `action`, `resource`, `payload`, `decision`, `policy_id`, `previous_hash`, `hash`, `timestamp` | Tamper-evident audit chain (HMAC-SHA256) |
+| **AuditEvent** | `event_id`, `actor`, `action`, `resource`, `payload`, `decision`, `policy_id`, `previous_hash`, `hash`, `timestamp` | Tamper-evident audit chain |
 | **SwarmSession** | `session_id`, `graph_id`, `domain`, `task_description`, `total_tasks`, `completed_tasks`, `failed_tasks`, `agents_used`, `status`, `parl_reward`, `theoretical_speedup`, `started_at`, `completed_at` | Session-level tracking |
 | **Policy** | `policy_id`, `tool`, `trust_level`, `max_calls`, `window_seconds`, `blocked_actions[]`, `approval_required_actions[]` | Governance policy rules |
 
@@ -179,10 +181,9 @@ All state lives in 8 SpaceTimeDB tables. The dashboard client subscribes to each
 
 **Task Status State Machine:**
 ```
-Pending → Ready → Active → Complete
-                 Active → Retry → Ready (loop)
-                 Active → Retry → Escalate (max retries)
-                 Active → Blocked → Pending (unblock)
+Pending -> Ready -> Active -> Complete
+                 Active -> Failed -> Ready (retry loop)
+                 Active -> Failed -> Escalate (max retries exceeded)
 ```
 
 **Scent Types:** `Completion`, `Failure`, `Difficulty`, `Urgency`, `Progress`, `HelpWanted`
@@ -195,26 +196,44 @@ Pending → Ready → Active → Complete
 
 ## Reducers
 
-SpaceTimeDB reducers are server-side functions that mutate tables atomically. Any connected client can invoke them — no Flask, no REST, no polling.
+SpaceTimeDB reducers are server-side functions that mutate tables atomically inside the database runtime. Any connected client can invoke them — no API layer, no authentication dance, no serialization overhead. Reducers run with serializable isolation guarantees and broadcast their mutations to every subscriber in the same transaction.
 
 | # | Reducer | Description |
 |---|---------|-------------|
-| 1 | `register_worker` | Register a new agent instance into the swarm |
-| 2 | `update_worker_heartbeat` | Update worker's last heartbeat timestamp |
-| 3 | `unregister_worker` | Remove a worker from the swarm |
-| 4 | `create_task` | Insert a new task into the DAG with dependencies |
-| 5 | `activate_ready_tasks` | Transition tasks from Pending → Ready when deps are met |
-| 6 | `claim_task` | Atomically claim a Ready task for a worker (Ready → Active) |
-| 7 | `complete_task` | Mark a task complete with result payload (Active → Complete) |
-| 8 | `fail_task` | Fail a task, retry or escalate based on retry count |
-| 9 | `block_task` | Block a task (Active → Blocked) |
-| 10 | `unblock_task` | Unblock a task (Blocked → Pending) |
-| 11 | `emit_scent` | Insert a pheromone signal into the scent field |
-| 12 | `decay_pheromones` | Decay expired scent signals (GC — removes signals below threshold) |
-| 13 | `grow_urgency` | Increase urgency signals for long-waiting tasks (prevent starvation) |
-| 14 | `cast_vote` | Submit a consensus vote for a task |
-| 15 | `compute_consensus` | Aggregate votes via LMSR scoring, produce ConsensusResult |
-| 16 | `record_audit` | Append a tamper-evident event to the audit chain (HMAC-SHA256 linked) |
+| 1 | `register_worker` | Register a new agent instance into the swarm with heartbeat tracking |
+| 2 | `heartbeat` | Update a worker's last-seen timestamp for liveness detection |
+| 3 | `unregister_worker` | Mark a worker as offline and release any claimed tasks |
+| 4 | `create_session` | Initialize a new swarm session with domain, task count, and agent pool |
+| 5 | `start_session` | Transition session from `Initializing` to `Running` |
+| 6 | `add_task` | Insert a new task into the DAG; auto-marks as `Ready` if no dependencies |
+| 7 | `claim_task` | Atomically claim a `Ready` task for a worker (`Ready` -> `Active`) |
+| 8 | `complete_task` | Mark task complete with result and reward; promote dependent tasks to `Ready`; update session counters |
+| 9 | `fail_task` | Fail a task with error payload; increment retry counter; update session failed counter |
+| 10 | `emit_scent` | Insert a pheromone signal into the scent field, broadcast to all subscribers |
+| 11 | `decay_scents` | Garbage-collect expired scent signals older than a configurable threshold |
+| 12 | `grow_urgency` | Find or create an `Urgency` scent for a task and increase intensity, capped at 5.0 |
+| 13 | `cast_vote` | Submit an agent's vote in a consensus round with position, confidence, and reasoning |
+| 14 | `compute_consensus` | Aggregate votes via LMSR scoring; count total and dissenting votes; produce `ConsensusResult` |
+| 15 | `complete_session` | Transition session to `Completed` with final PARL reward score |
+| 16 | `log_audit` | Append a tamper-evident event to the audit chain with deterministic hash linking |
+
+---
+
+## Dashboard
+
+The Next.js 16 dashboard provides real-time visibility into the entire swarm. It connects to SpaceTimeDB via WebSocket and updates all panels instantly as reducers mutate tables. When SpaceTimeDB is not available, it runs a full 15-step simulation demo with mock data — no backend required to preview.
+
+### Panels
+
+| Panel | Shows |
+|-------|-------|
+| **Stats Row** | Worker count, tasks complete (X/Y), scent signal count, consensus score |
+| **Workers** | Registered agents with model, domain, tags, online status, last heartbeat |
+| **Task DAG** | All tasks with status badges, assigned worker, dependency count, reward |
+| **Scent Field Heatmap** | Per-task pheromone intensity bars (6 scent types, color-coded) |
+| **Consensus** | Final position, confidence bar, heterogeneity, debate rounds, escalation flag, vote list |
+| **Event Stream** | Chronological log of every reducer invocation and state change (auto-scrolling) |
+| **Session** | Domain, status, agent count, PARL reward, speedup, progress bar |
 
 ---
 
@@ -228,28 +247,27 @@ SpaceTimeDB reducers are server-side functions that mutate tables atomically. An
 | 4 | **Predictive Simulation** | HIGH | Social dynamics forecasting via MiroFish OASIS engine |
 | 5 | **Content & Marketing** | MED-HIGH | 3-5x production speed, viral prediction, SEO |
 | 6 | **Healthcare & Drug Discovery** | MEDIUM | Drug repurposing, clinical trial design, regulatory nav |
-| 7 | **Political & Social Forecasting** | MEDIUM | Election prediction (Brier 0.101 → closing gap) |
+| 7 | **Political & Social Forecasting** | MEDIUM | Election prediction (Brier 0.101 -> closing gap) |
 | 8 | **Real Estate & Location Intel** | MEDIUM | Gentrification prediction, site selection, climate risk |
 | 9 | **Talent & HR Intelligence** | MEDIUM | Hiring timing, retention signals, comp benchmarking |
 
 ---
 
-## Open-Source Tech Stack
+## Tech Stack
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
 | **Real-Time Database** | **SpaceTimeDB** | Hosted relational DB with WebSocket subscriptions + compiled Rust reducers |
-| **Coordination Backend** | **SpaceTimeDB Reducers** | Atomic task claiming, scent emission, consensus, audit (replaces Flask) |
-| **Client Transport** | **WebSocket Subscriptions** | Zero-polling real-time state sync (replaces HTTP polling) |
+| **Coordination Backend** | **SpaceTimeDB Reducers** | Atomic task claiming, scent emission, consensus, audit — runs inside the DB runtime |
+| **Client Transport** | **WebSocket Subscriptions** | Zero-polling real-time state sync to every connected client |
+| **Dashboard Client** | **Next.js 16 + TypeScript + Zustand** | Real-time swarm monitoring UI with 7 panels |
 | **Simulation Engine** | MiroFish + OASIS (CAMEL-AI) | Multi-agent swarm simulation |
 | **Coordination Logic** | Stigmergy (TEMM1E-inspired) | Zero-token pheromone signals |
 | **Parallelism** | PARL (Kimi K2.5-inspired) | Dynamic decomposition + reward shaping |
 | **Consensus** | LMSR + Contrarian Agents | Anti-sycophancy adversarial debate |
-| **Governance Kernel** | PolicyGate + AuditKernel | Approval gates, HMAC-SHA256 audit chain |
+| **Governance Kernel** | PolicyGate + AuditKernel | Approval gates, tamper-evident audit chain |
 | **LLM Backend** | Ollama / vLLM / llama.cpp | Self-hosted inference ($0 API cost) |
 | **Models** | Qwen-2.5, DeepSeek-R1, Llama-3.3 | Heterogeneous pool (anti-groupthink) |
-| **Dashboard Client** | Next.js 16 + TypeScript + Zustand | Real-time swarm monitoring UI |
-| **Monitoring** | Grafana + Prometheus | Swarm health, cost, sycophancy alerts |
 
 ---
 
@@ -257,8 +275,8 @@ SpaceTimeDB reducers are server-side functions that mutate tables atomically. An
 
 ```bash
 # 1. Clone
-git clone <this-repo>
-cd swarm-pack-spacetimedb
+git clone https://github.com/Cubiczan/Cubiczan-swarm-pack.git
+cd Cubiczan-swarm-pack
 
 # 2. Start SpaceTimeDB
 spacetimedb start --host 0.0.0.0 --port 3000
@@ -276,23 +294,35 @@ npm run dev
 # 5. Open http://localhost:3001
 ```
 
-> **Note:** The dashboard runs in demo/simulation mode when SpaceTimeDB is not connected, using the built-in mock-data simulation runner. No database or backend is required to preview the UI.
+> **Demo mode:** The dashboard runs a full simulation when SpaceTimeDB is not connected. Click "Run Simulation" to see workers registering, tasks being claimed and completed, scent signals emitting, consensus votes casting, and the audit trail logging — all in real-time. No database or backend required.
 
 ---
 
 ## Project Structure
 
 ```
-swarm-pack-spacetimedb/
-├── client/                        # Next.js 16 dashboard
-│   ├── src/lib/types.ts           # STDB table type definitions
-│   ├── src/lib/spacetime.ts       # WebSocket connection + subscriptions
-│   ├── src/lib/store.ts           # Zustand state management
-│   ├── src/lib/mock-data.ts       # Simulation runner (demo mode)
-│   └── src/app/page.tsx           # Full dashboard UI
-├── src/swarm_module/              # SpaceTimeDB Rust module
-│   └── src/lib.rs                 # Tables + 16 reducers
-└── README.md
+Cubiczan-swarm-pack/
++-- client/                        # Next.js 16 dashboard
+|   +-- src/lib/types.ts           # SpaceTimeDB table type definitions
+|   +-- src/lib/spacetime.ts       # WebSocket connection + table subscriptions
+|   +-- src/lib/store.ts           # Zustand state management with scent aggregation
+|   +-- src/lib/mock-data.ts       # 15-step simulation runner (demo mode)
+|   +-- src/app/page.tsx           # Full dashboard UI (7 panels)
+|   +-- src/app/globals.css        # Dark theme (slate/navy, emerald primary)
+|   +-- src/app/layout.tsx         # Geist fonts, metadata
++-- src/swarm_module/              # SpaceTimeDB Rust module
+|   +-- src/lib.rs                 # 8 tables + 16 reducers (533 lines)
+|   +-- Cargo.toml                 # Rust dependencies (spacetimedb 1.0)
++-- assets/
+|   +-- demo.mp4                   # 3-minute demo video
+|   +-- logo.png                   # 512x512 logo
+|   +-- thumbnail.png              # 1344x768 DevSpot thumbnail
++-- domains/                       # 9 enterprise domain configurations
++-- agents/                        # Agent definitions and profiles
++-- orchestrator/                   # Coordination engine (Python)
++-- monitoring/                     # Grafana dashboards + Prometheus config
++-- docs/                          # Architecture, domain playbooks, governance
++-- README.md
 ```
 
 ---
@@ -301,33 +331,33 @@ swarm-pack-spacetimedb/
 
 ### vs. AutoGen / CrewAI / LangGraph
 
-| Feature | AutoGen | CrewAI | LangGraph | **Cubiczan** | **Cubiczan + STDB** |
-|---------|---------|--------|-----------|-------------|---------------------|
-| Coordination | LLM-to-LLM chat | LLM delegation | Graph routing | **Stigmergy (0 tokens)** | **Stigmergy (0 tokens)** |
-| Context growth | Quadratic | Quadratic | Linear (nodes) | **Flat (~190 bytes/worker)** | **Flat (~190 bytes/worker)** |
-| Anti-sycophancy | None | None | None | **LMSR + contrarian + model diversity** | **LMSR + contrarian + model diversity** |
-| Parallel execution | Sequential | Sequential default | Node-level | **Task-level (atomic SQLite)** | **Task-level (atomic STDB reducers)** |
-| Simple task overhead | Framework boot | Framework boot | Framework boot | **Zero. Invisible.** | **Zero. Invisible.** |
-| Real-time updates | Polling | Polling | Polling | HTTP polling | **WebSocket push (zero polling)** |
-| Domain specialization | Manual | Role-based | Manual | **9 pre-built enterprise domains** | **9 pre-built enterprise domains** |
-| Simulation engine | None | None | None | **MiroFish OASIS (33K+ stars)** | **MiroFish OASIS (33K+ stars)** |
+| Feature | AutoGen | CrewAI | LangGraph | **Cubiczan** |
+|---------|---------|--------|-----------|-------------|
+| Coordination | LLM-to-LLM chat | LLM delegation | Graph routing | **Stigmergy (0 tokens)** |
+| Context growth | Quadratic | Quadratic | Linear (nodes) | **Flat (~190 bytes/worker)** |
+| Anti-sycophancy | None | None | None | **LMSR + contrarian + model diversity** |
+| Parallel execution | Sequential | Sequential default | Node-level | **Task-level (atomic STDB reducers)** |
+| Simple task overhead | Framework boot | Framework boot | Framework boot | **Zero. Invisible.** |
+| Real-time updates | Polling | Polling | Polling | **WebSocket push (zero polling)** |
+| Domain specialization | Manual | Role-based | Manual | **9 pre-built enterprise domains** |
+| Simulation engine | None | None | None | **MiroFish OASIS (33K+ stars)** |
 
-### vs. TEMM1E (direct)
+### vs. TEMM1E
 
-| Feature | TEMM1E | **Cubiczan + STDB** |
-|---------|--------|---------------------|
+| Feature | TEMM1E | **Cubiczan** |
+|---------|--------|-------------|
 | Language | Rust (17 crates) | **Rust reducers + TypeScript client** |
 | Coordination | Stigmergy | **Stigmergy + PARL + Consensus** |
-| State store | In-memory | **SpaceTimeDB (persistent, distributed)** |
-| Real-time sync | None | **WebSocket subscriptions** |
+| State store | In-memory | **SpaceTimeDB (persistent, distributed, multi-client)** |
+| Real-time sync | None | **WebSocket subscriptions (zero polling)** |
 | Domain configs | Generic | **9 enterprise domain packs** |
 | Simulation | None | **MiroFish parallel worlds** |
 | Anti-sycophancy | N/A (single-model) | **Heterogeneous models + contrarian** |
 
-### vs. Kimi K2.5 Agent Swarm (direct)
+### vs. Kimi K2.5 Agent Swarm
 
-| Feature | Kimi K2.5 PARL | **Cubiczan + STDB** |
-|---------|---------------|---------------------|
+| Feature | Kimi K2.5 PARL | **Cubiczan** |
+|---------|---------------|-------------|
 | Coordination tokens | Reduced | **Zero (stigmergy)** |
 | Open source models | Kimi K2.5 only | **Any OpenAI-compatible** |
 | Task selection | LLM-based | **Arithmetic (40 LOC formula)** |
@@ -365,7 +395,6 @@ swarm-pack-spacetimedb/
 - TEMM1E stigmergy concepts: MIT
 - Cubiczan extensions: AGPL-3.0
 - Domain configurations: AGPL-3.0
-- SpaceTimeDB integration: AGPL-3.0
 
 ---
 
@@ -377,7 +406,7 @@ This repository is hardened with the [Consensus Hardening Protocol (CHP)](https:
 - **R0 Gate**: All decisions must pass Solvable, Scoped, Valid, Worth_it checks
 - **Foundation Disclosure**: 1-3 weakest assumptions, 1-2 invalidation conditions, 1 key vulnerability
 - **Adversarial Layer**: Mandatory devil's advocate at Phase 0 and Round 3
-- **State Machine**: EXPLORING → PROVISIONAL → PROVISIONAL_LOCK → LOCKED
+- **State Machine**: EXPLORING -> PROVISIONAL -> PROVISIONAL_LOCK -> LOCKED
 - **Third-Party Validation**: Independent CONFIRM/REJECT before lock
 
 ### Domain Configuration
