@@ -275,7 +275,7 @@ The Next.js 16 dashboard provides real-time visibility into the entire swarm. It
 
 ```bash
 # 1. Clone
-git clone https://github.com/Cubiczan/Cubiczan-swarm-pack.git
+git clone https://github.com/icohangar-ops/cubiczan-swarm-pack.git
 cd Cubiczan-swarm-pack
 
 # 2. Start SpaceTimeDB
