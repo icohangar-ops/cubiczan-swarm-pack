@@ -4,9 +4,10 @@ Port: 5002
 """
 
 import os
+import json
 import uuid
 import logging
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -21,6 +22,7 @@ CORS(app)
 # Lazy initialization to avoid import errors during Docker build
 _coordinator = None
 _policy_gate = None
+_consensus_engine = None
 
 
 def get_coordinator():
@@ -29,6 +31,17 @@ def get_coordinator():
         from hybrid_coordinator import HybridCoordinator
         _coordinator = HybridCoordinator(db_path="cubiczan_swarm.db")
     return _coordinator
+
+
+def get_consensus_engine():
+    global _consensus_engine
+    if _consensus_engine is None:
+        try:
+            from consensus import ConsensusEngine
+        except ImportError:
+            from .consensus import ConsensusEngine
+        _consensus_engine = ConsensusEngine()
+    return _consensus_engine
 
 
 def get_policy_gate():
@@ -122,6 +135,81 @@ def execute_task():
     except Exception as e:
         logger.error(f"Execution failed: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/swarm/debate/stream", methods=["POST"])
+def debate_stream():
+    """Stream an adversarial consensus debate over Server-Sent Events.
+
+    Drives the existing ConsensusEngine and streams every debate turn
+    (debate_start / round_start / agent_vote / round_end / debate_end) to the
+    client as it happens — the real-time debate experience ported from
+    swarmchat, adapted to this repo's Python/Flask orchestrator.
+
+    POST body:
+    {
+        "task": "Should we acquire CompanyX?",   # required
+        "cluster_size": 4,                          # optional
+        "actor": "api-client",                      # optional (governance)
+        "approved_by_human": false, "approval_id": null
+    }
+
+    Response: text/event-stream. Each SSE message is `data: <json>\\n\\n`.
+    Governance is evaluated up-front (same gate as /api/swarm/execute); if the
+    action is denied, a single `error` event is emitted carrying the decision.
+    """
+    data = request.get_json() or {}
+    task = data.get("task", "")
+    if not task:
+        return jsonify({"error": "Missing 'task' field"}), 400
+
+    try:
+        cluster_size = int(data.get("cluster_size", 4))
+    except (TypeError, ValueError):
+        return jsonify({"error": "'cluster_size' must be an integer"}), 400
+
+    # Fail-closed governance gate before any LLM work, mirroring execute_task.
+    decision = get_policy_gate().evaluate(
+        tool="swarm.debate",
+        actor=data.get("actor", "api-client"),
+        action="debate",
+        intent=task,
+        evidence=data.get("evidence") or {},
+        approved_by_human=bool(data.get("approved_by_human", False)),
+        approval_id=data.get("approval_id"),
+    )
+
+    def sse(event: dict) -> str:
+        # Drop the internal result object before serializing to the wire.
+        payload = {k: v for k, v in event.items() if k != "_result_obj"}
+        return "data: " + json.dumps(payload) + "\n\n"
+
+    @stream_with_context
+    def generate():
+        if not decision.allowed:
+            yield sse({
+                "type": "error",
+                "message": "Action blocked by governance policy",
+                "governance": decision.to_dict(),
+            })
+            return
+        try:
+            engine = get_consensus_engine()
+            for event in engine.stream_consensus(task, cluster_size=cluster_size):
+                yield sse(event)
+        except Exception as e:  # surface failures to the client, then end stream
+            logger.error(f"Debate stream failed: {e}", exc_info=True)
+            yield sse({"type": "error", "message": str(e)})
+
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # disable proxy buffering for live SSE
+        },
+    )
 
 
 @app.route("/api/swarm/domains", methods=["GET"])

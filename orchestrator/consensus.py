@@ -10,6 +10,7 @@ import json
 import math
 import os
 from dataclasses import dataclass, field
+from typing import Iterator
 from openai import OpenAI
 
 try:
@@ -150,40 +151,110 @@ class ConsensusEngine:
             is_contrarian=is_contrarian,
         )
 
-    def run_consensus(self, task: str, cluster_size: int = 4) -> ConsensusResult:
-        """Run adversarial consensus with heterogeneous agents."""
+    @staticmethod
+    def _build_round_context(round_votes: "list[AgentVote]") -> str:
+        """Render one round's votes as the context shown to the next round."""
+        return "\n\n".join(
+            f"[{v.agent_id} ({v.model_name})] "
+            f"{'[CONTRARIAN] ' if v.is_contrarian else ''}"
+            f"Position: {v.position}\n"
+            f"Confidence: {v.confidence}\n"
+            f"Reasoning: {v.reasoning}"
+            for v in round_votes
+        )
+
+    def stream_consensus(
+        self, task: str, cluster_size: int = 4
+    ) -> "Iterator[dict]":
+        """Run adversarial consensus, yielding each debate turn as it happens.
+
+        This is the streaming counterpart of ``run_consensus``: it drives the
+        exact same engine but ``yield``s a dict event for every step instead of
+        only returning the final result. Consumers (the SSE endpoint, the CLI
+        shim, or ``run_consensus`` itself) can react incrementally.
+
+        Event shapes (all dicts carry a ``"type"`` key):
+          - ``debate_start``  : {task, cluster_size, max_rounds, threshold,
+                                 heterogeneity_score, model_families}
+          - ``round_start``   : {round, total_rounds}
+          - ``agent_vote``    : {round, agent_id, model_name, position,
+                                 confidence, reasoning, is_contrarian}
+          - ``round_end``     : {round, total_rounds, consensus_score,
+                                 consensus_reached}
+          - ``debate_end``    : {result: <ConsensusResult.__dict__-like dict>}
+
+        The terminal ``debate_end`` event carries the fully-assembled
+        ``ConsensusResult`` (via :meth:`_serialize_result`) so a streaming
+        client gets the same payload a non-streaming caller would.
+        """
         agents = self.models[:cluster_size]
         if not agents:
             raise ValueError("No agent models configured")
         heterogeneity = compute_heterogeneity_score([agent["model"] for agent in agents])
 
+        yield {
+            "type": "debate_start",
+            "task": task,
+            "cluster_size": len(agents),
+            "max_rounds": self.max_rounds,
+            "threshold": self.threshold,
+            "heterogeneity_score": heterogeneity.score,
+            "model_families": heterogeneity.families,
+        }
+
         # Assign contrarian role (last agent in cluster)
         contrarian_idx = len(agents) - 1
 
-        all_votes: list[AgentVote] = []
+        all_votes: "list[AgentVote]" = []
         context = "No prior analysis available. You are the first to analyze."
+        consensus_score = 0.0
+        result = None
 
         for round_num in range(self.max_rounds):
-            round_votes = []
+            yield {
+                "type": "round_start",
+                "round": round_num + 1,
+                "total_rounds": self.max_rounds,
+            }
+
+            round_votes: "list[AgentVote]" = []
             for i, agent in enumerate(agents):
                 is_contrarian = (i == contrarian_idx)
                 vote = self._query_agent(agent, task, context, is_contrarian)
                 round_votes.append(vote)
+                yield {
+                    "type": "agent_vote",
+                    "round": round_num + 1,
+                    "agent_id": vote.agent_id,
+                    "model_name": vote.model_name,
+                    "position": vote.position,
+                    "confidence": vote.confidence,
+                    "reasoning": vote.reasoning,
+                    "is_contrarian": vote.is_contrarian,
+                }
 
             all_votes.extend(round_votes)
 
-            # Calculate consensus
+            # Calculate consensus (non-contrarian confidences only)
             confidences = [v.confidence for v in round_votes if not v.is_contrarian]
             consensus_score = self.scorer.score_consensus(confidences)
+            consensus_reached = consensus_score >= self.threshold
 
-            if consensus_score >= self.threshold:
-                # Consensus reached
+            yield {
+                "type": "round_end",
+                "round": round_num + 1,
+                "total_rounds": self.max_rounds,
+                "consensus_score": consensus_score,
+                "consensus_reached": consensus_reached,
+            }
+
+            if consensus_reached:
                 majority = max(round_votes, key=lambda v: v.confidence)
                 dissents = [
                     v.position for v in round_votes
                     if v.is_contrarian and v.confidence > 0.5
                 ]
-                return ConsensusResult(
+                result = ConsensusResult(
                     final_position=majority.position,
                     consensus_score=consensus_score,
                     votes=all_votes,
@@ -194,32 +265,75 @@ class ConsensusEngine:
                     model_families=heterogeneity.families,
                     governance_attribution=heterogeneity.attribution,
                 )
+                break
 
             # Build context for next round
-            context = "\n\n".join(
-                f"[{v.agent_id} ({v.model_name})] "
-                f"{'[CONTRARIAN] ' if v.is_contrarian else ''}"
-                f"Position: {v.position}\n"
-                f"Confidence: {v.confidence}\n"
-                f"Reasoning: {v.reasoning}"
-                for v in round_votes
+            context = self._build_round_context(round_votes)
+
+        if result is None:
+            # No consensus — escalate to human
+            majority = max(all_votes, key=lambda v: v.confidence)
+            result = ConsensusResult(
+                final_position=majority.position,
+                consensus_score=consensus_score,
+                votes=all_votes,
+                debate_rounds=self.max_rounds,
+                escalate_to_human=True,
+                dissenting_views=[
+                    v.position for v in all_votes if v.is_contrarian
+                ],
+                heterogeneity_score=heterogeneity.score,
+                model_families=heterogeneity.families,
+                governance_attribution=heterogeneity.attribution,
             )
 
-        # No consensus — escalate to human
-        majority = max(all_votes, key=lambda v: v.confidence)
-        return ConsensusResult(
-            final_position=majority.position,
-            consensus_score=consensus_score,
-            votes=all_votes,
-            debate_rounds=self.max_rounds,
-            escalate_to_human=True,
-            dissenting_views=[
-                v.position for v in all_votes if v.is_contrarian
+        yield {
+            "type": "debate_end",
+            "result": self._serialize_result(result),
+            "_result_obj": result,
+        }
+
+    def run_consensus(self, task: str, cluster_size: int = 4) -> ConsensusResult:
+        """Run adversarial consensus with heterogeneous agents.
+
+        Thin wrapper over :meth:`stream_consensus` so streaming and
+        non-streaming callers share one implementation. Drains the generator
+        and returns the final ``ConsensusResult`` carried by ``debate_end``.
+        """
+        result = None
+        for event in self.stream_consensus(task, cluster_size=cluster_size):
+            if event.get("type") == "debate_end":
+                result = event["_result_obj"]
+        if result is None:  # pragma: no cover - stream_consensus always ends with debate_end
+            raise RuntimeError("Consensus stream ended without a result")
+        return result
+
+    @staticmethod
+    def _serialize_result(result: ConsensusResult) -> dict:
+        """JSON-safe view of a ConsensusResult (votes flattened to dicts)."""
+        return {
+            "final_position": result.final_position,
+            "consensus_score": result.consensus_score,
+            "debate_rounds": result.debate_rounds,
+            "escalate_to_human": result.escalate_to_human,
+            "dissenting_views": result.dissenting_views,
+            "heterogeneity_score": result.heterogeneity_score,
+            "model_families": result.model_families,
+            "governance_attribution": result.governance_attribution,
+            "total_votes": len(result.votes),
+            "dissenting_count": sum(1 for v in result.votes if v.is_contrarian),
+            "votes": [
+                {
+                    "agent_id": v.agent_id,
+                    "model_name": v.model_name,
+                    "position": v.position,
+                    "confidence": v.confidence,
+                    "reasoning": v.reasoning,
+                    "is_contrarian": v.is_contrarian,
+                }
+                for v in result.votes
             ],
-            heterogeneity_score=heterogeneity.score,
-            model_families=heterogeneity.families,
-            governance_attribution=heterogeneity.attribution,
-        )
+        }
 
     def _requires_heterogeneity_escalation(self, report: HeterogeneityReport) -> bool:
         return report.score < self.min_heterogeneity_score
